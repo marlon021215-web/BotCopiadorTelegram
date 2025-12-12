@@ -1,54 +1,59 @@
 from telethon import TelegramClient, events
-import asyncio
 import re
 
-# ==== TUS DATOS ====
+# ======================
+# CONFIGURACIÓN
+# ======================
+
 api_id = 38616374
 api_hash = "fc9e3d72e05c43f541caee55838d0c54"
 
-canal_origen = -1001572222502      # CorretoraQuotex
-canal_destino = -1003277843142     # Quotexplus
-# ====================
+# Muy importante: NO usar el número aquí en Render.
+# Render usará la sesión guardada automáticamente.
+telefono_o_token = None
 
+canal_origen = -1001572222502
+canal_destino = -1003277843142
 
-client = TelegramClient('session_copybot', api_id, api_hash)
+# ======================
+# INICIO DEL CLIENTE
+# ======================
 
-# 🔥 Función que elimina links
-def limpiar_urls(texto):
-    if not texto:
-        return ""
-    return re.sub(r'https?://\S+', '', texto).strip()
+client = TelegramClient("session", api_id, api_hash)
 
+# Quitar URLs
+def limpiar_texto(texto):
+    if texto is None:
+        return None
+    return re.sub(r'https?://\S+|t\.me/\S+', '', texto).strip()
+
+# ======================
+# MANEJAR MENSAJES NUEVOS
+# ======================
 
 @client.on(events.NewMessage(chats=canal_origen))
-async def copiar(event):
+async def handler(event):
 
-    try:
-        # Eliminar URLs del texto
-        texto = limpiar_urls(event.message.message)
+    texto = limpiar_texto(event.text)
 
-        # 🟩 SI ES SOLO TEXTO
-        if event.message.message and not event.message.media:
-            await client.send_message(canal_destino, texto)
+    if not texto:
+        print("Mensaje ignorado (solo tenía links).")
+        return
 
-        # 🟦 SI CONTIENE FOTO/VIDEO/ARCHIVO
-        elif event.message.media:
-            await client.send_file(
-                canal_destino,
-                event.message.media,
-                caption=texto
-            )
+    await client.send_message(canal_destino, texto)
+    print("Mensaje enviado al canal destino.")
 
-        print("Mensaje copiado sin URLs.")
-
-    except Exception as e:
-        print("ERROR:", e)
-
+# ======================
+# EJECUCIÓN
+# ======================
 
 async def main():
-    print("BOT INICIADO — COPIANDO SEÑALES SIN LINKS...")
-    await client.run_until_disconnected()
+    print("========== BOT INICIADO ==========")
+    print("Copiando señales sin enlaces...")
+    print(f"Canal origen : {canal_origen}")
+    print(f"Canal destino: {canal_destino}")
+    print("=================================\n")
 
-
-with client:
-    client.loop.run_until_complete(main())
+client.start()   # ← SIN NÚMERO, USA session.session DIRECTO
+client.loop.run_until_complete(main())
+client.run_until_disconnected()
